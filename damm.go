@@ -19,16 +19,11 @@ type Alphabet interface {
 }
 
 func New(alphabet Alphabet) (Status, error) {
-	if alphabet == nil {
-		return nil, fmt.Errorf("missing alphabet")
-	}
-
 	sz := alphabet.Size()
 	mat, ok := matrices[sz]
 	if !ok {
 		return nil, fmt.Errorf("unsupported alphabet size: %d", sz)
 	}
-
 	return &status{0, alphabet, mat}, nil
 }
 
