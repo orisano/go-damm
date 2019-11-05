@@ -1,20 +1,22 @@
-package damm
+package damm_test
 
 import (
 	"testing"
+
+	"github.com/orisano/go-damm"
 )
 
-func TestIsValidDigit(t *testing.T) {
+func TestIsValid(t *testing.T) {
 	ts := []string{
 		"0123456789",
 		"11223334442222",
 		"9876",
 		"100101010102030",
 	}
-	a := Digit()
+	a := damm.Digit
 	for _, tc := range ts {
 		b := []byte(tc)
-		d, err := CheckDigit(b)
+		d, err := damm.CheckSymbol(a, b)
 		if err != nil {
 			t.Errorf("failed to calculate check digit: %v", err)
 			continue
@@ -27,7 +29,7 @@ func TestIsValidDigit(t *testing.T) {
 			var bb []byte
 			bb = append(bb, b...)
 			bb[i], bb[i+1] = bb[i+1], bb[i]
-			ok, err := IsValidDigit(bb)
+			ok, err := damm.IsValid(a, bb)
 			if err != nil {
 				t.Errorf("failed to check check digit: %v", err)
 				continue
@@ -42,7 +44,7 @@ func TestIsValidDigit(t *testing.T) {
 				var bb []byte
 				bb = append(bb, b...)
 				bb[i] = c
-				ok, err := IsValidDigit(bb)
+				ok, err := damm.IsValid(a, bb)
 				if err != nil {
 					t.Errorf("failed to check check digit: %v", err)
 					continue

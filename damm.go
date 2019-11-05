@@ -2,15 +2,7 @@ package damm
 
 import (
 	"fmt"
-	"io"
 )
-
-type Status interface {
-	io.Writer
-	IsValid() bool
-	CheckSymbol() byte
-	Reset()
-}
 
 type Alphabet interface {
 	Chr(x uint8) byte
@@ -18,100 +10,49 @@ type Alphabet interface {
 	Size() uint8
 }
 
-func New(alphabet Alphabet) (Status, error) {
-	sz := alphabet.Size()
+var Digit digit
+var UpperHex upperHex
+var LowerHex lowerHex
+
+func CheckSymbol(alphabet Alphabet, b []byte) (byte, error) {
+	s, err := consume(alphabet, b)
+	if err != nil {
+		return 0, err
+	}
+	return alphabet.Chr(s), nil
+}
+
+func AppendCheckSymbol(alphabet Alphabet, b []byte) ([]byte, error) {
+	sym, err := CheckSymbol(alphabet, b)
+	if err != nil {
+		return nil, err
+	}
+	return append(b, sym), nil
+}
+
+func IsValid(alphabet Alphabet, b []byte) (bool, error) {
+	s, err := consume(alphabet, b)
+	if err != nil {
+		return false, err
+	}
+	return s == 0, nil
+}
+
+func consume(a Alphabet, b []byte) (uint8, error) {
+	var s uint8
+	sz := a.Size()
 	mat, ok := matrices[sz]
 	if !ok {
-		return nil, fmt.Errorf("unsupported alphabet size: %d", sz)
+		return 0, fmt.Errorf("unsupported alphabet size: %d", sz)
 	}
-	return &status{0, alphabet, mat}, nil
-}
-
-func Digit() Alphabet {
-	return &digit{}
-}
-
-func UpperHex() Alphabet {
-	return &upperHex{}
-}
-
-func LowerHex() Alphabet {
-	return &lowerHex{}
-}
-
-func CheckSymbol(b []byte, alphabet Alphabet) (byte, error) {
-	st, err := New(alphabet)
-	if err != nil {
-		return 0, err
-	}
-	if _, err := st.Write(b); err != nil {
-		return 0, err
-	}
-	return st.CheckSymbol(), nil
-}
-
-func CheckDigit(b []byte) (byte, error) {
-	return CheckSymbol(b, &digit{})
-}
-
-func CheckUpperHex(b []byte) (byte, error) {
-	return CheckSymbol(b, &upperHex{})
-}
-
-func CheckLowerHex(b []byte) (byte, error) {
-	return CheckSymbol(b, &lowerHex{})
-}
-
-func IsValid(b []byte, alphabet Alphabet) (bool, error) {
-	st, err := New(alphabet)
-	if err != nil {
-		return false, err
-	}
-	if _, err := st.Write(b); err != nil {
-		return false, err
-	}
-	return st.IsValid(), nil
-}
-
-func IsValidDigit(b []byte) (bool, error) {
-	return IsValid(b, &digit{})
-}
-
-func IsValidUpperHex(b []byte) (bool, error) {
-	return IsValid(b, &upperHex{})
-}
-
-func IsValidLowerHex(b []byte) (bool, error) {
-	return IsValid(b, &lowerHex{})
-}
-
-type status struct {
-	s        uint8
-	alphabet Alphabet
-	mat      [][]uint8
-}
-
-func (s *status) Write(p []byte) (n int, err error) {
-	for _, c := range p {
-		o, err := s.alphabet.Ord(c)
+	for _, c := range b {
+		o, err := a.Ord(c)
 		if err != nil {
 			return 0, err
 		}
-		s.s = s.mat[s.s][o]
+		s = mat[s][o]
 	}
-	return len(p), nil
-}
-
-func (s *status) IsValid() bool {
-	return s.s == 0
-}
-
-func (s *status) CheckSymbol() byte {
-	return s.alphabet.Chr(s.s)
-}
-
-func (s *status) Reset() {
-	s.s = 0
+	return s, nil
 }
 
 type invalidCharacterError struct {
@@ -125,24 +66,24 @@ func (e *invalidCharacterError) Error() string {
 
 type digit struct{}
 
-func (*digit) Chr(x uint8) byte {
+func (digit) Chr(x uint8) byte {
 	return '0' + x
 }
 
-func (*digit) Ord(c byte) (uint8, error) {
+func (digit) Ord(c byte) (uint8, error) {
 	if c < '0' || '9' < c {
 		return 0, &invalidCharacterError{"[0-9]", c}
 	}
 	return c - '0', nil
 }
 
-func (*digit) Size() uint8 {
+func (digit) Size() uint8 {
 	return 10
 }
 
 type upperHex struct{}
 
-func (*upperHex) Chr(x uint8) byte {
+func (upperHex) Chr(x uint8) byte {
 	if x < 10 {
 		return '0' + x
 	} else {
@@ -150,7 +91,7 @@ func (*upperHex) Chr(x uint8) byte {
 	}
 }
 
-func (*upperHex) Ord(c byte) (uint8, error) {
+func (upperHex) Ord(c byte) (uint8, error) {
 	if '0' <= c && c <= '9' {
 		return c - '0', nil
 	}
@@ -160,13 +101,13 @@ func (*upperHex) Ord(c byte) (uint8, error) {
 	return 0, &invalidCharacterError{"[0-9A-F]", c}
 }
 
-func (*upperHex) Size() uint8 {
+func (upperHex) Size() uint8 {
 	return 16
 }
 
 type lowerHex struct{}
 
-func (*lowerHex) Chr(x uint8) byte {
+func (lowerHex) Chr(x uint8) byte {
 	if x < 10 {
 		return '0' + x
 	} else {
@@ -174,7 +115,7 @@ func (*lowerHex) Chr(x uint8) byte {
 	}
 }
 
-func (*lowerHex) Ord(c byte) (uint8, error) {
+func (lowerHex) Ord(c byte) (uint8, error) {
 	if '0' <= c && c <= '9' {
 		return c - '0', nil
 	}
@@ -184,6 +125,6 @@ func (*lowerHex) Ord(c byte) (uint8, error) {
 	return 0, &invalidCharacterError{"[0-9a-f]", c}
 }
 
-func (*lowerHex) Size() uint8 {
+func (lowerHex) Size() uint8 {
 	return 16
 }
