@@ -1,6 +1,6 @@
 def main():
     txt = open("damm.txt").read().strip()
-    smatrice = txt.split("\n\n")
+    smatrice = txt.split("\r\n\r\n")[2:]
     print("package damm")
     print("")
     print("var matrices map[uint8][][]uint8 = map[uint8][][]uint8{")
