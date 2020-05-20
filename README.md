@@ -5,7 +5,7 @@
 go-damm is an implementation of damm algorithm.
 
 ## Author
-Nao YONASHIRO(@orisano)
+Nao Yonashiro(@orisano)
 
 ## License
 MIT
